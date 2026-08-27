@@ -599,6 +599,22 @@ const server=http.createServer(async(req,res)=>{
     });
     return;
   }
+  // serve the studio (free funnel) static app from the same backend — enables a custom subdomain
+  if(req.method==="GET"){
+    const PUBLIC=path.join(__dirname,"public");
+    const map={"":["index.html"],"/":"index.html","/index":"index.html","/index.html":"index.html",
+      "/demo.mp4":"demo.mp4","/box.svg":"box.svg"};
+    const key=url==="/"?"/":url;
+    if(map[key]){
+      const f=path.join(PUBLIC,map[key]);
+      if(fs.existsSync(f)){
+        const ct=key.endsWith(".mp4")?"video/mp4":key.endsWith(".svg")?"image/svg+xml":"text/html; charset=utf-8";
+        res.writeHead(200,{"Content-Type":ct,"Cache-Control":key.endsWith(".mp4")?"public, max-age=3600":"no-cache"});
+        fs.createReadStream(f).pipe(res);
+        return;
+      }
+    }
+  }
   send(res,404,{error:"not found"});
 });
 server.listen(PORT,()=>console.log(`Hologram backend on :${PORT} | wall: ${PUBLIC_URL}/wall`));
