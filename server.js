@@ -169,24 +169,18 @@ function saveVideoDataUrl(dataUrl,dest){
   fs.writeFileSync(dest,Buffer.from(b64,"base64"));
   return true;
 }
-// detect mp4 codec by sniffing the ftyp brand (HEVC vs H.264)
+// detect mp4 codec by searching for codec fourcc (hvc1/hev1=HEVC, avc1=H.264) — reliable vs ftyp brand sniffing
 function detectCodec(filePath){
   try{
+    const size=fs.statSync(filePath).size;
+    const readSize=Math.min(size, 50e6);
     const fd=fs.openSync(filePath,"r");
-    const buf=Buffer.alloc(64);
-    fs.readSync(fd,buf,0,64,0); fs.closeSync(fd);
-    if(buf.toString("ascii",4,8)!=="ftyp") return "unknown";
-    const brands=new Set();
-    const major=buf.toString("ascii",8,12).toLowerCase(); if(major) brands.add(major);
-    let off=16;
-    while(off+4<=64){
-      const b=buf.toString("ascii",off,off+4).toLowerCase();
-      if(!b || b==="\0\0\0\0") break;
-      brands.add(b); off+=4;
-    }
-    if(brands.has("hevc")||brands.has("hevx")||brands.has("hvc1")||brands.has("hev1")) return "hevc";
-    if(brands.has("mp42")||brands.has("mp41")||brands.has("isom")) return "h264-or-other";
-    return "other";
+    const buf=Buffer.alloc(readSize);
+    fs.readSync(fd,buf,0,readSize,0); fs.closeSync(fd);
+    const s=buf.toString("latin1");
+    if(s.includes("hvc1")||s.includes("hev1")||s.includes("hvx1")) return "hevc";
+    if(s.includes("avc1")) return "h264";
+    return "unknown";
   }catch(e){ return "unknown"; }
 }
 let _ffmpegPath=null;
@@ -262,7 +256,7 @@ body{margin:0;background:#0f0c09;color:#F4EBDD;font-family:Georgia,serif;-webkit
 .top b{color:#C9A86A}
 .vid{position:relative;margin:14px 16px 0;background:#000;border-radius:20px;overflow:hidden;cursor:pointer;
   box-shadow:0 0 0 1px rgba(201,168,106,.35),0 18px 50px rgba(0,0,0,.6)}
-.vid video{width:100%;display:block;aspect-ratio:1/1;object-fit:contain;transition:transform .9s cubic-bezier(.22,.8,.3,1)}
+.vid video{display:block;width:100%;max-height:68vh;object-fit:contain;background:#000;transition:transform .9s cubic-bezier(.22,.8,.3,1)}
 .vid.close video{transform:scale(1.22)}
 .vid .heart{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:50px;opacity:0;pointer-events:none;
   filter:drop-shadow(0 0 14px rgba(201,168,106,.9))}
@@ -468,7 +462,7 @@ const server=http.createServer(async(req,res)=>{
   const url=req.url.split("?")[0];
   if(req.method==="OPTIONS") return send(res,200,{});
   if(req.method==="GET"&&url==="/api/health")
-    return send(res,200,{ok:true,shop:!!SHOP_TOKEN,kling:!!klingAuth(),pets:readPets().length});
+    return send(res,200,{ok:true,shop:!!SHOP_TOKEN,kling:!!klingAuth(),ffmpeg:!!getFfmpegPath(),pets:readPets().length});
   if(req.method==="GET"&&url==="/api/pets")
     return send(res,200,{ok:true,pets:readPets().map(p=>({id:p.id,name:p.name,type:p.type,
       dates:p.dates||"",letter:p.letter||"",scene:p.scene||"warm",
@@ -560,17 +554,17 @@ const server=http.createServer(async(req,res)=>{
         const p=pets.find(x=>x.id===b.petId);
         if(!p) return send(res,404,{error:"pet not found"});
         if(!saveVideoDataUrl(b.video,path.join(VIDEOS,p.id+".mp4"))) return send(res,400,{error:"invalid video"});
-        // Transcode HEVC → H.264 so browsers (Chrome/Edge) can play it. WeChat mini-programs export HEVC by default.
+        // WeChat mini-programs export HEVC which browsers can't play → transcode to H.264 whenever it's not confirmed H.264
         let transcoded=false, codecNote="";
         const codec=detectCodec(path.join(VIDEOS,p.id+".mp4"));
-        if(codec==="hevc"){
+        if(codec!=="h264"){
           const ok=await transcodeToH264(path.join(VIDEOS,p.id+".mp4"));
-          if(ok){ transcoded=true; codecNote=" (auto-converted from HEVC to H.264)"; }
-          else { fs.unlinkSync(path.join(VIDEOS,p.id+".mp4")); return send(res,400,{error:"视频是 HEVC 编码，浏览器播不了。请在小程序里导出为 H.264 后再上传。"}); }
+          if(ok){ transcoded=true; codecNote=codec==="hevc"?" (HEVC→H.264 已自动转码)":" (已优化为网页兼容格式)"; }
+          else if(codec==="hevc"){ fs.unlinkSync(path.join(VIDEOS,p.id+".mp4")); return send(res,400,{error:"浏览器无法播放 HEVC，请在小程序里导出为 H.264 后重新上传。"}); }
         }
         p.status="ready"; p.readyAt=Date.now(); p.codec=codec; p.transcoded=transcoded;
         writePets(pets);
-        return send(res,200,{ok:true,petUrl:`${PUBLIC_URL}/pet/${p.id}`,note:transcoded?"视频已自动转码，浏览器可直接播放。":undefined});
+        return send(res,200,{ok:true,petUrl:`${PUBLIC_URL}/pet/${p.id}`,note:codecNote||undefined});
       }catch(e){ return send(res,500,{error:e.message}); }
     });
     return;
