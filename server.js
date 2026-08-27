@@ -61,7 +61,7 @@ function checkDailyLimit(){
   let d = {date:today, count:0};
   try { d = JSON.parse(fs.readFileSync(LIMITS, "utf8")); } catch {}
   if(d.date !== today) d = {date:today, count:0};
-  const MAX = parseInt(process.env.FREE_DAILY_LIMIT || "50", 10);
+  const MAX = parseInt(process.env.FREE_DAILY_LIMIT || "10", 10);
   if(d.count >= MAX) return false;
   d.count++;
   fs.writeFileSync(LIMITS, JSON.stringify(d));
@@ -374,7 +374,7 @@ p{color:#C9A86A;line-height:1.7;margin:0 0 8px}
 <div class="avatar"><img src="/data/photos/${p.id}.jpg" alt=""></div>
 <span class="candle">🕯️</span>
 <h1>${esc(p.name)} is being lovingly crafted</h1>
-<p>Their film is being made by hand, with care.<br>Usually ready in <b>5–15 minutes</b>.</p>
+<p>Their film is being made by hand, with care — usually ready within <b>24–48 hours</b>.<br>This page refreshes by itself; the moment it's ready, they'll appear here, in light.</p>
 <p>This page refreshes itself — please check back shortly.<br>The moment it's ready, they'll appear here, in light.</p>
 <div class="dim">Pet Memory · forever in our hearts</div>
 </div><script>setTimeout(function(){location.reload()},30000);</script></body></html>`;
