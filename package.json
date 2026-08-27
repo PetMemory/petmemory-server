@@ -1,11 +1,14 @@
 {
-  "name": "pawmemory-hologram-server",
-  "version": "1.0.0",
+  "name": "petmemory-hologram-server",
+  "version": "1.1.0",
   "private": true,
-  "description": "Order-verified, Kling-powered pet hologram film backend for Pet Memory",
+  "description": "Pet Memory backend — auto-transcodes uploaded videos to H.264 for browser playback",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
+  },
+  "dependencies": {
+    "@ffmpeg-installer/ffmpeg": "^1.1.0"
   },
   "engines": {
     "node": ">=18"

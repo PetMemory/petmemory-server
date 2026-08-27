@@ -169,6 +169,45 @@ function saveVideoDataUrl(dataUrl,dest){
   fs.writeFileSync(dest,Buffer.from(b64,"base64"));
   return true;
 }
+// detect mp4 codec by sniffing the ftyp brand (HEVC vs H.264)
+function detectCodec(filePath){
+  try{
+    const fd=fs.openSync(filePath,"r");
+    const buf=Buffer.alloc(64);
+    fs.readSync(fd,buf,0,64,0); fs.closeSync(fd);
+    if(buf.toString("ascii",4,8)!=="ftyp") return "unknown";
+    const brands=new Set();
+    const major=buf.toString("ascii",8,12).toLowerCase(); if(major) brands.add(major);
+    let off=16;
+    while(off+4<=64){
+      const b=buf.toString("ascii",off,off+4).toLowerCase();
+      if(!b || b==="\0\0\0\0") break;
+      brands.add(b); off+=4;
+    }
+    if(brands.has("hevc")||brands.has("hevx")||brands.has("hvc1")||brands.has("hev1")) return "hevc";
+    if(brands.has("mp42")||brands.has("mp41")||brands.has("isom")) return "h264-or-other";
+    return "other";
+  }catch(e){ return "unknown"; }
+}
+let _ffmpegPath=null;
+function getFfmpegPath(){
+  if(_ffmpegPath!==null) return _ffmpegPath || null;
+  try{ _ffmpegPath=require("@ffmpeg-installer/ffmpeg").path; }catch(e){ _ffmpegPath=false; }
+  return _ffmpegPath || null;
+}
+async function transcodeToH264(filePath){
+  const fp=getFfmpegPath(); if(!fp) return false;
+  const tmp=filePath+".tmp.mp4";
+  return new Promise((resolve)=>{
+    const{spawnSync}=require("child_process");
+    const r=spawnSync(fp,["-y","-i",filePath,"-c:v","libx264","-pix_fmt","yuv420p","-preset","fast","-crf","22","-c:a","aac","-b:a","128k","-movflags","+faststart","-loglevel","error",tmp],{timeout:180000});
+    if(r.status===0 && fs.existsSync(tmp) && fs.statSync(tmp).size>1000){
+      try{fs.unlinkSync(filePath);}catch(e){}
+      fs.renameSync(tmp,filePath);
+      resolve(true);
+    } else { try{fs.unlinkSync(tmp);}catch(e){} resolve(false); }
+  });
+}
 async function downloadTo(url,dest){
   const r=await fetch(url); if(!r.ok) throw new Error("download failed "+r.status);
   fs.writeFileSync(dest,Buffer.from(await r.arrayBuffer()));
@@ -521,9 +560,17 @@ const server=http.createServer(async(req,res)=>{
         const p=pets.find(x=>x.id===b.petId);
         if(!p) return send(res,404,{error:"pet not found"});
         if(!saveVideoDataUrl(b.video,path.join(VIDEOS,p.id+".mp4"))) return send(res,400,{error:"invalid video"});
-        p.status="ready"; p.readyAt=Date.now();
+        // Transcode HEVC → H.264 so browsers (Chrome/Edge) can play it. WeChat mini-programs export HEVC by default.
+        let transcoded=false, codecNote="";
+        const codec=detectCodec(path.join(VIDEOS,p.id+".mp4"));
+        if(codec==="hevc"){
+          const ok=await transcodeToH264(path.join(VIDEOS,p.id+".mp4"));
+          if(ok){ transcoded=true; codecNote=" (auto-converted from HEVC to H.264)"; }
+          else { fs.unlinkSync(path.join(VIDEOS,p.id+".mp4")); return send(res,400,{error:"视频是 HEVC 编码，浏览器播不了。请在小程序里导出为 H.264 后再上传。"}); }
+        }
+        p.status="ready"; p.readyAt=Date.now(); p.codec=codec; p.transcoded=transcoded;
         writePets(pets);
-        return send(res,200,{ok:true,petUrl:`${PUBLIC_URL}/pet/${p.id}`});
+        return send(res,200,{ok:true,petUrl:`${PUBLIC_URL}/pet/${p.id}`,note:transcoded?"视频已自动转码，浏览器可直接播放。":undefined});
       }catch(e){ return send(res,500,{error:e.message}); }
     });
     return;
