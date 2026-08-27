@@ -1,0 +1,13 @@
+{
+  "name": "pawmemory-hologram-server",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Order-verified, Kling-powered pet hologram film backend for Pet Memory",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
