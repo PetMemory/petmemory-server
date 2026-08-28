@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" fill="none">
+  <defs>
+    <linearGradient id="glass" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.55"/>
+      <stop offset="0.5" stop-color="#f3e9d8" stop-opacity="0.25"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0.5"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.62" r="0.5">
+      <stop offset="0" stop-color="#f6dca0" stop-opacity="0.95"/>
+      <stop offset="0.6" stop-color="#caa15c" stop-opacity="0.45"/>
+      <stop offset="1" stop-color="#caa15c" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#b0894f"/>
+      <stop offset="1" stop-color="#8a6a38"/>
+    </linearGradient>
+  </defs>
+
+  <!-- soft backdrop -->
+  <rect width="400" height="400" fill="#FBF7F1"/>
+
+  <!-- glow behind pet -->
+  <ellipse cx="200" cy="232" rx="120" ry="130" fill="url(#glow)"/>
+
+  <!-- holographic pet silhouette -->
+  <g opacity="0.92" fill="#5a4326">
+    <ellipse cx="200" cy="250" rx="46" ry="40"/>
+    <circle cx="200" cy="190" r="34"/>
+    <path d="M176 168 l-10 -26 24 14z"/>
+    <path d="M224 168 l10 -26 -24 14z"/>
+    <ellipse cx="200" cy="300" rx="30" ry="14"/>
+  </g>
+  <g opacity="0.5" fill="#fff6e6">
+    <circle cx="190" cy="186" r="5"/>
+    <circle cx="210" cy="186" r="5"/>
+  </g>
+
+  <!-- acrylic pyramid box -->
+  <path d="M200 96 L312 300 L88 300 Z" fill="url(#glass)" stroke="url(#gold)" stroke-width="2.5" stroke-opacity="0.8"/>
+  <path d="M200 96 L200 300" stroke="#b0894f" stroke-width="1" stroke-opacity="0.45"/>
+  <path d="M88 300 L312 300" stroke="url(#gold)" stroke-width="3" stroke-opacity="0.85"/>
+  <!-- base slab -->
+  <rect x="74" y="300" width="252" height="16" rx="4" fill="url(#gold)" opacity="0.9"/>
+
+  <!-- sparkle -->
+  <path d="M300 150 l4 12 12 4 -12 4 -4 12 -4 -12 -12 -4 12 -4z" fill="#b0894f" opacity="0.8"/>
+</svg>
