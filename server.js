@@ -352,8 +352,8 @@ body{margin:0;background:#0f0c09;color:#F4EBDD;font-family:Georgia,serif;-webkit
 <div class="vid" id="vid">
   <video id="v" src="/data/videos/${p.id}.mp4" loop autoplay muted playsinline></video>
   <div class="heart" id="heart">💛</div>
-  <div class="heard">…they heard you</div>
-  <div class="hint">tap them — they’ll come closer</div>
+  <div class="heard">…in their light</div>
+  <div class="hint">tap — their memory draws closer</div>
   <div class="fs" id="fsBtn">⛶ fullscreen (for the box)</div>
 </div>
 
