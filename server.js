@@ -210,36 +210,91 @@ async function downloadTo(url,dest){
 const esc = s => String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 
 function wallHTML(allPets){
-  const pets=allPets.filter(p=>p.status==="ready");   // wall shows finished films only
+  // 公共分享区 — only films whose owners consented to sharing (share:true)
+  const pets=allPets.filter(p=>p.status==="ready"&&p.share);
   const cards=pets.map(p=>`
     <a class="card" href="/pet/${p.id}">
       <div class="avatar"><img src="/data/photos/${p.id}.jpg" alt="${esc(p.name)}"></div>
       <div class="nm">${esc(p.name)}</div>
+      ${(p.oneLine||p.letter)?`<div class="ln">“${esc(p.oneLine||p.letter)}”</div>`:""}
       ${p.dates?`<div class="dt">${esc(p.dates)}</div>`:""}
       <div class="tp">${p.type==="cat"?"🐱":"🐶"}</div>
     </a>`).join("");
-  const empty=`<div class="empty">No little souls here yet.<br>Generate your first film and they'll appear on this wall, forever.</div>`;
+  const empty=`<div class="empty">No shared stories here yet.<br>When families choose to share their film, it appears here — kept in light, together.</div>`;
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Memorial Wall — Pet Memory</title><style>
+<title>Shared Stories — Pet Memory</title><style>
 body{margin:0;background:#14100d;color:#F4EBDD;font-family:Georgia,serif;min-height:100vh}
 .wrap{max-width:900px;margin:0 auto;padding:48px 22px}
 h1{font-weight:600;text-align:center;font-size:34px;margin:0 0 8px}
-.sub{text-align:center;color:#C9A86A;margin:0 0 40px;font-size:15px}
+.sub{text-align:center;color:#C9A86A;margin:0 0 14px;font-size:15px}
+.nav{text-align:center;margin:0 0 36px;font-size:14px}
+.nav a{color:#C9A86A;text-decoration:none;border:1px solid rgba(201,168,106,.4);padding:8px 16px;border-radius:999px;margin:0 6px}
+.nav a:hover{background:#1d1814}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:20px}
 .card{text-decoration:none;color:inherit;text-align:center;display:block}
 .avatar{width:100%;aspect-ratio:1/1;border-radius:50%;overflow:hidden;margin:0 auto 10px;
   border:2px solid #B0894F;box-shadow:0 0 24px rgba(201,168,106,.35);background:#241d18}
 .avatar img{width:100%;height:100%;object-fit:cover}
 .nm{font-size:18px}.tp{font-size:14px;color:#C9A86A;margin-top:2px}
+.ln{font-size:12px;color:#cbb89a;font-style:italic;margin-top:4px;line-height:1.4;padding:0 4px}
 .dt{font-size:12px;color:#8a7d6f;letter-spacing:1px;margin-top:2px}
 .card:hover .avatar{box-shadow:0 0 34px rgba(201,168,106,.6)}
 .empty{text-align:center;color:#8a7d6f;padding:60px 20px;line-height:1.7;font-size:16px}
 footer{text-align:center;color:#8a7d6f;font-size:13px;margin-top:50px}
 </style></head><body><div class="wrap">
-<h1>The Memorial Wall</h1>
-<p class="sub">Every little soul, kept in light. Tap one to bring them close.</p>
+<h1>Shared Stories</h1>
+<p class="sub">Little souls kept in light, shared by the families who miss them.</p>
+<div class="nav"><a href="/">🏠 Studio</a><a href="/my">🔒 My private space</a></div>
 <div class="grid">${cards||empty}</div>
 <footer>Pet Memory · forever in our hearts</footer>
+</div></body></html>`;
+}
+
+// 私人区 — a private lookup: enter your email to find your own films
+function myHTML(allPets,email){
+  const em=(email||"").trim().toLowerCase();
+  const mine=em?allPets.filter(p=>(p.email||"").toLowerCase()===em||String(p.orderNumber||"")===em):[];
+  const cards=mine.map(p=>{
+    const ready=p.status==="ready";
+    return `<div class="card2 ${ready?'':'wait'}">
+      <img class="ph" src="/data/photos/${p.id}.jpg" alt="${esc(p.name)}">
+      <div class="info">
+        <div class="nm">${esc(p.name)} ${p.type==="cat"?"🐱":"🐶"}</div>
+        ${(p.oneLine||p.letter)?`<div class="ln">“${esc(p.oneLine||p.letter)}”</div>`:""}
+        ${ready?`<a class="go" href="/pet/${p.id}">▶ Watch their film →</a>`:`<div class="pend">⏳ Being crafted — usually 24–48h</div>`}
+      </div>
+    </div>`;
+  }).join("");
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>My Private Space — Pet Memory</title><style>
+body{margin:0;background:#14100d;color:#F4EBDD;font-family:Georgia,serif;min-height:100vh}
+.wrap{max-width:640px;margin:0 auto;padding:48px 22px}
+h1{font-weight:600;text-align:center;font-size:30px;margin:0 0 8px}
+.sub{text-align:center;color:#C9A86A;margin:0 0 14px;font-size:15px}
+.nav{text-align:center;margin:0 0 34px;font-size:14px}
+.nav a{color:#C9A86A;text-decoration:none;border:1px solid rgba(201,168,106,.4);padding:8px 16px;border-radius:999px;margin:0 6px}
+.nav a:hover{background:#1d1814}
+form{display:flex;gap:10px;margin:0 auto 30px;max-width:440px}
+form input{flex:1;padding:13px 15px;border-radius:12px;border:1px solid rgba(201,168,106,.4);background:#1d1814;color:#F4EBDD;font-size:15px;font-family:inherit}
+form button{background:#B0894F;color:#fff;border:none;padding:13px 22px;border-radius:12px;font-size:15px;cursor:pointer;font-family:inherit}
+.card2{display:flex;gap:14px;align-items:center;background:#1d1814;border:1px solid rgba(201,168,106,.25);border-radius:16px;padding:14px;margin-bottom:14px;text-align:left}
+.card2 .ph{width:72px;height:72px;border-radius:50%;object-fit:cover;border:2px solid #B0894F;flex:none}
+.card2 .nm{font-size:18px}
+.card2 .ln{font-size:13px;color:#cbb89a;font-style:italic;margin-top:3px}
+.card2 .go{display:inline-block;margin-top:8px;background:#B0894F;color:#fff;text-decoration:none;padding:9px 16px;border-radius:10px;font-size:13px}
+.card2 .pend{margin-top:8px;color:#C9A86A;font-size:13px}
+.note{text-align:center;color:#8a7d6f;font-size:13px;margin-top:16px;line-height:1.6}
+.empty2{text-align:center;color:#8a7d6f;padding:40px 16px;line-height:1.7}
+</style></head><body><div class="wrap">
+<h1>My Private Space</h1>
+<p class="sub">Enter the email you used, and your films are waiting.</p>
+<div class="nav"><a href="/">🏠 Studio</a><a href="/wall">🌍 Shared stories</a></div>
+<form method="GET" action="/my">
+  <input type="text" name="email" placeholder="your email (or order number)" value="${esc(email||"")}">
+  <button type="submit">Find my films</button>
+</form>
+${em?(mine.length?cards:`<div class="empty2">No films found for <b>${esc(em)}</b>.<br>Check the email spelling, or make your first film in the Studio.</div>`):""}
+${mine.length?`<div class="note">These are only visible with your email. Keep it private.</div>`:""}
 </div></body></html>`;
 }
 
@@ -472,8 +527,19 @@ const server=http.createServer(async(req,res)=>{
     return send(res,200,{ok:true,stories:readPets().filter(p=>p.status==="ready"&&p.share)
       .map(p=>({name:p.name,type:p.type,oneLine:p.oneLine||p.letter||"",dates:p.dates||"",
         videoUrl:`/data/videos/${p.id}.mp4`,petUrl:`/pet/${p.id}`}))});
+  // 私人区数据接口：按邮箱或订单号查自己的影片
+  if(req.method==="GET"&&url==="/api/my"){
+    const em=((req.url.split("email=")[1]||"").split("&")[0]||"").toLowerCase();
+    const pets=readPets().filter(p=>(p.email||"").toLowerCase()===em||String(p.orderNumber||"")===em);
+    return send(res,200,{ok:true,pets:pets.map(p=>({id:p.id,name:p.name,type:p.type,
+      oneLine:p.oneLine||p.letter||"",dates:p.dates||"",status:p.status,petUrl:`/pet/${p.id}`}))});
+  }
   if(req.method==="GET"&&url==="/wall")
     return (res.writeHead(200,{"Content-Type":"text/html"}),res.end(wallHTML(readPets())));
+  if(req.method==="GET"&&url==="/my"){
+    const em=decodeURIComponent((req.url.split("email=")[1]||"").split("&")[0]||"");
+    return (res.writeHead(200,{"Content-Type":"text/html"}),res.end(myHTML(readPets(),em)));
+  }
   if(req.method==="GET"&&url.startsWith("/pet/")){
     const p=readPets().find(x=>x.id===url.slice(5));
     if(!p){res.writeHead(404,{"Content-Type":"text/html"});return res.end("not found");}
