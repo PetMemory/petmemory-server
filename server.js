@@ -669,7 +669,7 @@ const server=http.createServer(async(req,res)=>{
   if(req.method==="GET"){
     const PUBLIC=path.join(__dirname,"public");
     const map={"":["index.html"],"/":"index.html","/index":"index.html","/index.html":"index.html",
-      "/demo.mp4":"demo.mp4","/box.svg":"box.svg"};
+      "/demo.mp4":"demo.mp4","/premium.mp4":"premium.mp4","/box.svg":"box.svg"};
     const key=url==="/"?"/":url;
     if(map[key]){
       const f=path.join(PUBLIC,map[key]);

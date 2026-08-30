@@ -356,8 +356,12 @@
     t.addEventListener("click",function(){
       document.querySelectorAll(".tier").forEach(function(x){x.classList.remove("on");});
       t.classList.add("on"); state.tier=t.dataset.t;
-      $("#pvLen").textContent=state.tier==="premium"?"15s":"5s";
-      $("#submitBtn").textContent=state.tier==="premium"?"Checkout — Premium 15s ($29.99)":"🕯️ Create my free memorial";
+      var prem=state.tier==="premium";
+      $("#pvLen").textContent=prem?"15s":"5s";
+      $("#pvTag").textContent=prem?"a cinematic memory, in light":"a memory of them, in motion";
+      var v=$("#demoVid");
+      if(v){ v.src=prem?"premium.mp4":"demo.mp4"; v.load(); var pr=v.play(); if(pr&&pr.catch)pr.catch(function(){}); }
+      $("#submitBtn").textContent=prem?"Checkout — Premium 15s ($29.99)":"🕯️ Create my free memorial";
     });
   });
 
