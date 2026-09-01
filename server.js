@@ -34,6 +34,16 @@ const ADMIN_KEY = process.env.ADMIN_KEY || "";                // merchant consol
 const PORT = process.env.PORT || 3000;
 const PUBLIC_URL = (process.env.PUBLIC_URL || "").replace(/\/$/, "");
 
+// Google Ads 基础标签（全站页面注入）
+const GTAG = `<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=AW-18422126507"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'AW-18422126507');
+</script>`;
+
 const DATA = path.join(__dirname, "data");
 const PHOTOS = path.join(DATA, "photos");
 const VIDEOS = path.join(DATA, "videos");
@@ -218,7 +228,7 @@ function genGiftCode(){
 
 // 激活页：输入激活码 → 解锁查看被送的记忆
 function giftHTML(err){
-  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8">${GTAG}<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Open a Gifted Memory — Pet Memory</title><style>
 body{margin:0;background:#14100d;color:#F4EBDD;font-family:Georgia,serif;min-height:100vh;display:flex;align-items:center;justify-content:center}
 .box{text-align:center;padding:40px 26px;max-width:400px}
@@ -256,7 +266,7 @@ function wallHTML(allPets){
       <div class="tp">${p.type==="cat"?"🐱":"🐶"}</div>
     </a>`).join("");
   const empty=`<div class="empty">No shared stories here yet.<br>When families choose to share their film, it appears here — kept in light, together.</div>`;
-  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8">${GTAG}<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Shared Stories — Pet Memory</title><style>
 body{margin:0;background:#14100d;color:#F4EBDD;font-family:Georgia,serif;min-height:100vh}
 .wrap{max-width:900px;margin:0 auto;padding:48px 22px}
@@ -300,7 +310,7 @@ function myHTML(allPets,email){
       </div>
     </div>`;
   }).join("");
-  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8">${GTAG}<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>My Private Space — Pet Memory</title><style>
 body{margin:0;background:#14100d;color:#F4EBDD;font-family:Georgia,serif;min-height:100vh}
 .wrap{max-width:640px;margin:0 auto;padding:48px 22px}
@@ -337,7 +347,7 @@ function petHTML(p){
   const oneLine=p.oneLine||p.letter||"";
   const shareUrl=encodeURIComponent(`${PUBLIC_URL}/pet/${p.id}`);
   const shareText=encodeURIComponent(`${esc(p.name)} — forever in light. 🕯️`);
-  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8">${GTAG}<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${esc(p.name)} — Pet Memory</title><style>
 *{box-sizing:border-box}
 body{margin:0;background:#0f0c09;color:#F4EBDD;font-family:Georgia,serif;-webkit-font-smoothing:antialiased}
@@ -540,7 +550,7 @@ document.getElementById('giftBtn').addEventListener('click',function(){
 }
 
 function waitingHTML(p){
-  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8">${GTAG}<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${esc(p.name)} — Pet Memory</title><style>
 body{margin:0;background:#14100d;color:#F4EBDD;font-family:Georgia,serif;min-height:100vh;display:flex;align-items:center;justify-content:center}
 .box{text-align:center;padding:40px 26px;max-width:420px}
@@ -585,7 +595,7 @@ function adminHTML(pets,key){
       </div>
     </div>`;
   }).join("");
-  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8">${GTAG}<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Merchant Console — Pet Memory</title><style>
 body{margin:0;background:#FBF7F1;color:#2B2722;font-family:-apple-system,'Segoe UI',sans-serif}
 .wrap{max-width:680px;margin:0 auto;padding:26px 16px}
