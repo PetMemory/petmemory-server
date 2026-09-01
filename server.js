@@ -209,6 +209,41 @@ async function downloadTo(url,dest){
 
 const esc = s => String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 
+function genGiftCode(){
+  const chars="ABCDEFGHJKMNPQRSTUVWXYZ23456789"; // 无 0/O/1/I/L，避免看错
+  let s="";
+  for(let i=0;i<6;i++) s+=chars[Math.floor(Math.random()*chars.length)];
+  return "GIFT-"+s;
+}
+
+// 激活页：输入激活码 → 解锁查看被送的记忆
+function giftHTML(err){
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Open a Gifted Memory — Pet Memory</title><style>
+body{margin:0;background:#14100d;color:#F4EBDD;font-family:Georgia,serif;min-height:100vh;display:flex;align-items:center;justify-content:center}
+.box{text-align:center;padding:40px 26px;max-width:400px}
+.emo{font-size:44px;margin-bottom:16px}
+h1{font-size:24px;margin:0 0 10px;font-weight:600}
+p{color:#C9A86A;font-size:14px;line-height:1.7;margin:0 0 24px}
+form{display:flex;gap:10px}
+input{flex:1;padding:14px 15px;border-radius:12px;border:1px solid rgba(201,168,106,.4);background:#1d1814;color:#F4EBDD;
+  font-size:16px;letter-spacing:2px;text-transform:uppercase;font-family:inherit;text-align:center}
+button{background:#B0894F;color:#fff;border:none;padding:14px 20px;border-radius:12px;font-size:15px;cursor:pointer;font-family:inherit;font-weight:600}
+.err{color:#e0a9a9;font-size:13px;margin-top:14px;line-height:1.5}
+.note{color:#6f6455;font-size:12px;margin-top:20px}
+</style></head><body><div class="box">
+<div class="emo">🎁</div>
+<h1>Open a Gifted Memory</h1>
+<p>Someone who loves you sent you a memory.<br>Enter the activation code they gave you.</p>
+<form method="GET" action="/gift">
+  <input type="text" name="code" placeholder="GIFT-XXXXXX" maxlength="12" autocomplete="off">
+  <button type="submit">Open →</button>
+</form>
+${err?`<div class="err">${err}</div>`:""}
+<div class="note">Pet Memory · forever in light</div>
+</div></body></html>`;
+}
+
 function wallHTML(allPets){
   // 公共分享区 — only films whose owners consented to sharing (share:true)
   const pets=allPets.filter(p=>p.status==="ready"&&p.share);
@@ -360,6 +395,16 @@ body{margin:0;background:#0f0c09;color:#F4EBDD;font-family:Georgia,serif;-webkit
   padding:13px 26px;border-radius:12px;font-size:15px;cursor:pointer;font-weight:600;font-family:Arial,sans-serif}
 .lerr{color:#e0a9a9;font-size:13px;margin-top:10px}
 .lok{color:#C9A86A;font-size:13px;margin-top:10px}
+.giftwrap{text-align:center;padding:0 22px}
+.giftbtn{background:linear-gradient(120deg,#B0894F,#a07c44);color:#fff;border:none;padding:14px 28px;border-radius:12px;
+  font-size:16px;cursor:pointer;font-weight:600;font-family:Arial,sans-serif}
+.giftout{margin:18px auto 0;max-width:480px;padding:20px;border:1px solid rgba(201,168,106,.35);border-radius:16px;background:rgba(201,168,106,.06)}
+.gcode{font-size:24px;letter-spacing:3px;color:#C9A86A;font-weight:600;font-family:Georgia,serif}
+.gnote{color:#cbb89a;font-size:13px;line-height:1.6;margin:10px 0 14px}
+.glink{font-size:12px;color:#8a7d6f;word-break:break-all;background:#171310;padding:10px 12px;border-radius:10px;margin-bottom:14px}
+.copygift{background:transparent;border:1px solid rgba(201,168,106,.5);color:#F4EBDD;padding:11px 22px;border-radius:10px;
+  font-size:14px;cursor:pointer;font-family:Arial,sans-serif}
+.gerr{color:#e0a9a9;font-size:13px;margin-top:12px;line-height:1.5}
 </style></head><body>
 <div class="top">Pet Memory · <b>their light, kept</b></div>
 
@@ -414,6 +459,18 @@ body{margin:0;background:#0f0c09;color:#F4EBDD;font-family:Georgia,serif;-webkit
   <a href="https://wa.me/?text=${shareText}%20${shareUrl}" target="_blank" rel="noopener">WhatsApp</a>
 </div>
 
+<div class="sec">Gift their light 🎁</div>
+<div class="giftwrap">
+  <button class="giftbtn" id="giftBtn">🎁 Gift this memory</button>
+  <div class="giftout" id="giftOut" style="display:none">
+    <div class="gcode" id="gcode"></div>
+    <div class="gnote">Send this to someone you love — they'll open ${esc(p.name)}'s memory with it.</div>
+    <div class="glink" id="glink"></div>
+    <button class="copygift" id="copyGift">Copy gift link</button>
+  </div>
+  <div class="gerr" id="gerr"></div>
+</div>
+
 <div class="foot">Pet Memory · made with care, for the ones we miss.</div>
 
 <script>
@@ -452,6 +509,31 @@ document.getElementById('saveLetter').addEventListener('click',function(){
     } else { err.className='lerr'; err.textContent=j.error||'Something went wrong.'; }
   })
   .catch(function(){ self.disabled=false; err.className='lerr'; err.textContent='Network error.'; });
+});
+// gift this memory → generate activation code
+document.getElementById('giftBtn').addEventListener('click',function(){
+  var err=document.getElementById('gerr'); err.textContent='';
+  this.disabled=true; var self=this; this.textContent='Preparing your gift…';
+  fetch('/api/gift',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({petId:'${p.id}'})})
+  .then(function(r){return r.json().then(function(j){return{status:r.status,body:j};});})
+  .then(function(res){
+    self.disabled=false; self.textContent='🎁 Gift this memory';
+    var j=res.body;
+    if(j.ok){
+      document.getElementById('gcode').textContent=j.code;
+      document.getElementById('glink').textContent=j.giftUrl;
+      document.getElementById('giftOut').style.display='block';
+      var cp=document.getElementById('copyGift');
+      cp.onclick=function(){
+        var t=j.giftUrl;
+        if(navigator.clipboard) navigator.clipboard.writeText(t);
+        this.textContent='✓ Copied!'; var s=this; setTimeout(function(){s.textContent='Copy gift link';},1600);
+      };
+    } else {
+      err.textContent=j.error||'Could not create a gift code right now.';
+    }
+  })
+  .catch(function(){ self.disabled=false; self.textContent='🎁 Gift this memory'; err.textContent='Network error.'; });
 });
 </script>
 </body></html>`;
@@ -602,6 +684,40 @@ const server=http.createServer(async(req,res)=>{
       }catch(e){ return send(res,500,{error:e.message}); }
     });
     return;
+  }
+  // 激活码送礼：为某条记忆生成激活码（免费 1 个 / 付费 3 个）
+  if(req.method==="POST"&&url==="/api/gift"){
+    let raw=""; req.on("data",c=>{raw+=c; if(raw.length>20e3)req.destroy();});
+    req.on("end",()=>{
+      try{
+        const b=JSON.parse(raw||"{}");
+        const pets=readPets();
+        const p=pets.find(x=>x.id===String(b.petId||""));
+        if(!p) return send(res,404,{error:"memory not found"});
+        if(p.status!=="ready") return send(res,400,{error:"memory isn't ready yet"});
+        if(!Array.isArray(p.giftCodes)) p.giftCodes=[];
+        const paid=!!p.orderNumber;
+        const LIMIT=paid?3:1;
+        if(p.giftCodes.length>=LIMIT)
+          return send(res,429,{error:paid?"You've used all 3 gift codes for this memory.":"Free memories include 1 gift code. Go Premium to gift to more people."});
+        const code=genGiftCode();
+        p.giftCodes.push({code:code,createdAt:Date.now()});
+        writePets(pets);
+        return send(res,200,{ok:true,code:code,giftUrl:`${PUBLIC_URL}/gift?code=${code}`});
+      }catch(e){ return send(res,500,{error:e.message}); }
+    });
+    return;
+  }
+  // 激活页：输入激活码 → 验证 → 跳转到对应记忆
+  if(req.method==="GET"&&url==="/gift"){
+    const code=decodeURIComponent((req.url.split("code=")[1]||"").split("&")[0]||"").trim().toUpperCase();
+    if(code){
+      const pets=readPets();
+      const p=pets.find(x=>Array.isArray(x.giftCodes)&&x.giftCodes.some(g=>g.code===code));
+      if(p){ res.writeHead(302,{Location:`/pet/${p.id}`}); return res.end(); }
+      return (res.writeHead(200,{"Content-Type":"text/html"}),res.end(giftHTML("That code doesn't match any memory. Please check it and try again.")));
+    }
+    return (res.writeHead(200,{"Content-Type":"text/html"}),res.end(giftHTML("")));
   }
   if(req.method==="GET"&&url==="/wall")
     return (res.writeHead(200,{"Content-Type":"text/html"}),res.end(wallHTML(readPets())));
