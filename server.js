@@ -346,6 +346,20 @@ body{margin:0;background:#0f0c09;color:#F4EBDD;font-family:Georgia,serif;-webkit
   font-size:14px;font-family:Arial,sans-serif;border:1px solid rgba(201,168,106,.35);color:#F4EBDD}
 .share a:hover{background:#1d1814}
 .foot{text-align:center;color:#6f6455;font-size:12px;margin-top:44px;padding:0 16px}
+.letter{text-align:center;padding:6px 22px 0}
+.candlebtn{font-size:38px;display:inline-block;cursor:pointer;margin:2px auto;filter:grayscale(1) brightness(.55);transition:.4s;line-height:1}
+.candlebtn.lit{filter:none;animation:fl 2.2s ease-in-out infinite}
+@keyframes fl{0%,100%{opacity:.8;transform:scale(1)}50%{opacity:1;transform:scale(1.06)}}
+.candlenote{font-size:11px;color:#6f6455;letter-spacing:1px;margin-bottom:6px}
+.msg{font-style:italic;color:#e7d7b8;font-size:16.5px;line-height:1.8;max-width:520px;margin:14px auto 0;
+  padding:22px 24px;border:1px solid rgba(201,168,106,.3);border-radius:16px;background:rgba(201,168,106,.05);white-space:pre-wrap;text-align:left}
+.letterForm{margin:18px auto 0;max-width:520px}
+.letterForm textarea{width:100%;min-height:110px;background:#171310;border:1px solid rgba(201,168,106,.3);color:#F4EBDD;
+  border-radius:12px;padding:14px;font-family:Georgia,serif;font-size:15px;line-height:1.6;resize:vertical}
+.letterForm button{margin-top:12px;background:linear-gradient(120deg,#B0894F,#a07c44);color:#fff;border:none;
+  padding:13px 26px;border-radius:12px;font-size:15px;cursor:pointer;font-weight:600;font-family:Arial,sans-serif}
+.lerr{color:#e0a9a9;font-size:13px;margin-top:10px}
+.lok{color:#C9A86A;font-size:13px;margin-top:10px}
 </style></head><body>
 <div class="top">Pet Memory · <b>their light, kept</b></div>
 
@@ -361,6 +375,18 @@ body{margin:0;background:#0f0c09;color:#F4EBDD;font-family:Georgia,serif;-webkit
   <div class="nm">${esc(p.name)}</div>
   ${p.dates?`<div class="dt">${esc(p.dates)}</div>`:""}
   ${oneLine?`<div class="line">“${esc(oneLine)}”</div>`:""}
+</div>
+
+<div class="letter">
+  <div class="candlenote">tap the candle, keep ${esc(p.name)}'s light burning</div>
+  <div class="candlebtn" id="candle">🕯️</div>
+  <div class="sec" style="margin-top:22px">A letter to them</div>
+  ${p.message?`<div class="msg" id="msgView">${esc(p.message).replace(/\n/g,"<br>")}</div>`:""}
+  <div class="letterForm">
+    <textarea id="msg" placeholder="Write a few words, or a whole letter — from your heart…" maxlength="2000">${esc(p.message||"")}</textarea>
+    <button id="saveLetter">${p.message?"Update my letter":"Save my letter"} 🕯️</button>
+    <div class="lerr" id="lerr"></div>
+  </div>
 </div>
 
 <div class="sec">Keep them close</div>
@@ -401,6 +427,31 @@ document.getElementById('vid').addEventListener('click',function(e){
 document.getElementById('fsBtn').addEventListener('click',function(){
   var el=document.getElementById('vid');
   if(el.requestFullscreen){el.requestFullscreen()}else if(el.webkitRequestFullscreen){el.webkitRequestFullscreen()}
+});
+// candle ritual
+document.getElementById('candle').addEventListener('click',function(){ this.classList.toggle('lit'); });
+// save letter
+document.getElementById('saveLetter').addEventListener('click',function(){
+  var msg=document.getElementById('msg').value.trim();
+  var err=document.getElementById('lerr');
+  if(!msg){ err.className='lerr'; err.textContent='Please write something first.'; return; }
+  this.disabled=true; var self=this; err.className='lok'; err.textContent='Saving…';
+  fetch('/api/letter',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({petId:'${p.id}',message:msg})})
+  .then(function(r){return r.json()})
+  .then(function(j){
+    self.disabled=false;
+    if(j.ok){
+      err.className='lok'; err.textContent='Your letter is kept with them, in light. 🕯️';
+      var mv=document.getElementById('msgView');
+      if(!mv){ mv=document.createElement('div'); mv.id='msgView'; mv.className='msg';
+        var lf=document.querySelector('.letterForm'); lf.parentNode.insertBefore(mv,lf); }
+      mv.innerHTML=msg.replace(/</g,'&lt;').replace(/\n/g,'<br>');
+      self.textContent='Update my letter 🕯️';
+      var c=document.getElementById('candle'); c.classList.add('lit');
+    } else { err.className='lerr'; err.textContent=j.error||'Something went wrong.'; }
+  })
+  .catch(function(){ self.disabled=false; err.className='lerr'; err.textContent='Network error.'; });
 });
 </script>
 </body></html>`;
@@ -533,6 +584,24 @@ const server=http.createServer(async(req,res)=>{
     const pets=readPets().filter(p=>(p.email||"").toLowerCase()===em||String(p.orderNumber||"")===em);
     return send(res,200,{ok:true,pets:pets.map(p=>({id:p.id,name:p.name,type:p.type,
       oneLine:p.oneLine||p.letter||"",dates:p.dates||"",status:p.status,petUrl:`/pet/${p.id}`}))});
+  }
+  // 写信仪式：给宠物写一封完整的信（留念）
+  if(req.method==="POST"&&url==="/api/letter"){
+    let raw=""; req.on("data",c=>{raw+=c; if(raw.length>60e3)req.destroy();});
+    req.on("end",()=>{
+      try{
+        const b=JSON.parse(raw||"{}");
+        const pets=readPets();
+        const p=pets.find(x=>x.id===String(b.petId||""));
+        if(!p) return send(res,404,{error:"memory not found"});
+        const msg=String(b.message||"").trim().slice(0,2000);
+        if(!msg) return send(res,400,{error:"empty letter"});
+        p.message=msg; p.letterAt=Date.now();
+        writePets(pets);
+        return send(res,200,{ok:true});
+      }catch(e){ return send(res,500,{error:e.message}); }
+    });
+    return;
   }
   if(req.method==="GET"&&url==="/wall")
     return (res.writeHead(200,{"Content-Type":"text/html"}),res.end(wallHTML(readPets())));
