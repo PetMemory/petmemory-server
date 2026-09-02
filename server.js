@@ -62,7 +62,43 @@ const VERB = { wag:"wags its tail gently",blink:"blinks its eyes softly",run:"ru
   sit:"sits calmly and breathes",stretch:"stretches its body in the warm light" };
 
 const readPets = () => { try { return JSON.parse(fs.readFileSync(DB, "utf8")); } catch { return []; } };
-const writePets = p => fs.writeFileSync(DB, JSON.stringify(p, null, 2));
+const writePets = p => { fs.writeFileSync(DB, JSON.stringify(p, null, 2)); cldSavePets(p); };
+
+// ===== Cloudinary 云端存储（客户照片/视频/订单记录永久保存，Render 重建不丢）=====
+const https2=require("https");
+const CLD = (process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET)
+  ? require("cloudinary").v2 : null;
+if(CLD) CLD.config({cloud_name:process.env.CLOUDINARY_CLOUD_NAME,
+  api_key:process.env.CLOUDINARY_API_KEY, api_secret:process.env.CLOUDINARY_API_SECRET});
+function cldUpload(dataUrl,publicId,resourceType){
+  return new Promise((resolve)=>{
+    if(!CLD) return resolve(null);
+    CLD.uploader.upload(dataUrl,{public_id:publicId,resource_type:resourceType||"auto",overwrite:true})
+      .then(r=>resolve(r.secure_url)).catch(e=>{console.error("cld upload",publicId,e.message);resolve(null);});
+  });
+}
+function httpsGet(url){ return new Promise((res,rej)=>{ https2.get(url,r=>{ let d=""; r.on("data",c=>d+=c); r.on("end",()=>res(d)); }).on("error",rej); }); }
+const PETS_CLD_ID="petmemory/pets.json";
+// 启动时从云端拉取订单记录（重建后恢复）
+async function cldLoadPets(){
+  if(!CLD) return;
+  try{
+    const url=CLD.url(PETS_CLD_ID,{resource_type:"raw",secure:true})+"?t="+Date.now();
+    const txt=await httpsGet(url);
+    const arr=JSON.parse(txt);
+    if(Array.isArray(arr)&&arr.length){ fs.writeFileSync(DB,JSON.stringify(arr,null,2)); console.log("restored",arr.length,"pets from cloud"); }
+  }catch(e){ /* 第一次还没有云端记录，忽略 */ }
+}
+// 保存订单记录到云端（异步，不阻塞）
+function cldSavePets(pets){
+  if(!CLD) return;
+  try{
+    const dataUrl="data:application/json;base64,"+Buffer.from(JSON.stringify(pets)).toString("base64");
+    CLD.uploader.upload(dataUrl,{public_id:PETS_CLD_ID,resource_type:"raw",overwrite:true})
+      .catch(e=>console.error("cld save pets",e.message));
+  }catch(e){}
+}
+
 
 // daily cap on free submissions (SoulBridge-style scarcity)
 const LIMITS = path.join(DATA, "limits.json");
@@ -259,7 +295,7 @@ function wallHTML(allPets){
   const pets=allPets.filter(p=>p.status==="ready"&&p.share);
   const cards=pets.map(p=>`
     <a class="card" href="/pet/${p.id}">
-      <div class="avatar"><img src="/data/photos/${p.id}.jpg" alt="${esc(p.name)}"></div>
+      <div class="avatar"><img src="${p.photoUrl||("/data/photos/"+p.id+".jpg")}" alt="${esc(p.name)}"></div>
       <div class="nm">${esc(p.name)}</div>
       ${(p.oneLine||p.letter)?`<div class="ln">“${esc(p.oneLine||p.letter)}”</div>`:""}
       ${p.dates?`<div class="dt">${esc(p.dates)}</div>`:""}
@@ -302,7 +338,7 @@ function myHTML(allPets,email){
   const cards=mine.map(p=>{
     const ready=p.status==="ready";
     return `<div class="card2 ${ready?'':'wait'}">
-      <img class="ph" src="/data/photos/${p.id}.jpg" alt="${esc(p.name)}">
+      <img class="ph" src="${p.photoUrl||("/data/photos/"+p.id+".jpg")}" alt="${esc(p.name)}">
       <div class="info">
         <div class="nm">${esc(p.name)} ${p.type==="cat"?"🐱":"🐶"}</div>
         ${(p.oneLine||p.letter)?`<div class="ln">“${esc(p.oneLine||p.letter)}”</div>`:""}
@@ -423,7 +459,7 @@ body{margin:0;background:#0f0c09;color:#F4EBDD;font-family:Georgia,serif;-webkit
 <div class="top">Pet Memory · <b>their light, kept</b></div>
 
 <div class="vid" id="vid">
-  <video id="v" src="/data/videos/${p.id}.mp4" loop autoplay muted playsinline></video>
+  <video id="v" src="${p.videoUrl||("/data/videos/"+p.id+".mp4")}" loop autoplay muted playsinline></video>
   <div class="heart" id="heart">💛</div>
   <div class="heard">…in their light</div>
   <div class="hint">tap — their memory draws closer</div>
@@ -584,7 +620,7 @@ h1{font-size:26px;margin:0 0 10px;font-weight:600}
 p{color:#C9A86A;line-height:1.7;margin:0 0 8px}
 .dim{color:#8a7d6f;font-size:13px;margin-top:22px}
 </style></head><body><div class="box">
-<div class="avatar"><img src="/data/photos/${p.id}.jpg" alt=""></div>
+<div class="avatar"><img src="${p.photoUrl||("/data/photos/"+p.id+".jpg")}" alt=""></div>
 <span class="candle">🕯️</span>
 <h1>${esc(p.name)} is being lovingly crafted</h1>
 <p>Their film is being made by hand, with care — usually ready within <b>24–48 hours</b>.<br>This page refreshes by itself; the moment it's ready, they'll appear here, in light.</p>
@@ -704,12 +740,12 @@ const server=http.createServer(async(req,res)=>{
   if(req.method==="GET"&&url==="/api/pets")
     return send(res,200,{ok:true,pets:readPets().map(p=>({id:p.id,name:p.name,type:p.type,
       dates:p.dates||"",letter:p.letter||"",scene:p.scene||"warm",
-      photoUrl:`/data/photos/${p.id}.jpg`,videoUrl:`/data/videos/${p.id}.mp4`,createdAt:p.createdAt}))});
+      photoUrl:`${p.photoUrl||("/data/photos/"+p.id+".jpg")}`,videoUrl:`${p.videoUrl||("/data/videos/"+p.id+".mp4")}`,createdAt:p.createdAt}))});
   // public social-proof feed: ready films whose owners opted in to sharing (homepage "their stories")
   if(req.method==="GET"&&url==="/api/stories")
     return send(res,200,{ok:true,stories:readPets().filter(p=>p.status==="ready"&&p.share)
       .map(p=>({name:p.name,type:p.type,oneLine:p.oneLine||p.letter||"",dates:p.dates||"",
-        videoUrl:`/data/videos/${p.id}.mp4`,petUrl:`/pet/${p.id}`}))});
+        videoUrl:`${p.videoUrl||("/data/videos/"+p.id+".mp4")}`,petUrl:`/pet/${p.id}`}))});
   // 私人区数据接口：按邮箱或订单号查自己的影片
   if(req.method==="GET"&&url==="/api/my"){
     const em=((req.url.split("email=")[1]||"").split("&")[0]||"").toLowerCase();
@@ -811,10 +847,11 @@ const server=http.createServer(async(req,res)=>{
           let photoCount=0;
           photosIn.slice(0,5).forEach((ph,i)=>{ if(saveDataUrl(ph,path.join(PHOTOS,id+(i===0?"":"_"+i)+".jpg"))) photoCount++; });
           if(!photoCount) return send(res,400,{error:"invalid photo data"});
+          const photoUrl=await cldUpload(photosIn[0],"petmemory/photos/"+id,"image");   // 云端存客户实拍图
           pets.unshift({id,name:String(b.name||"My friend").slice(0,60),type:b.type||"cat",
             oneLine:String(b.oneLine||"").slice(0,200),story:String(b.story||"").slice(0,1000),
             email:em,share:!!b.share,tier:b.tier==="premium"?"premium":"free",free:true,
-            photoCount,status:"pending",createdAt:Date.now()});
+            photoCount,photoUrl,status:"pending",createdAt:Date.now()});
           writePets(pets);
           return send(res,200,{ok:true,petId:id,petUrl:`${PUBLIC_URL}/pet/${id}`,wallUrl:`${PUBLIC_URL}/wall`,free:true});
         }
@@ -831,10 +868,11 @@ const server=http.createServer(async(req,res)=>{
           if(saveDataUrl(ph,path.join(PHOTOS,id+(i===0?"":"_"+i)+".jpg"))) photoCount++;
         });
         if(!photoCount) return send(res,400,{error:"invalid photo data"});
+        const photoUrl=await cldUpload(photosIn[0],"petmemory/photos/"+id,"image");   // 云端存客户实拍图
         pets.unshift({id,name:String(b.name||"My friend").slice(0,60),type:b.type||"cat",
           dates:String(b.dates||"").slice(0,60),letter:String(b.letter||"").slice(0,300),
           scene:["warm","starry","sunset"].includes(b.scene)?b.scene:"warm",projection:!!b.projection,
-          actions:Array.isArray(b.actions)?b.actions.slice(0,8):[],photoCount,
+          actions:Array.isArray(b.actions)?b.actions.slice(0,8):[],photoCount,photoUrl,
           orderNumber:String(b.orderNumber).trim(),status:"pending",createdAt:Date.now()});
         writePets(pets);
         return send(res,200,{ok:true,petId:id,petUrl:`${PUBLIC_URL}/pet/${id}`,wallUrl:`${PUBLIC_URL}/wall`});
@@ -863,7 +901,9 @@ const server=http.createServer(async(req,res)=>{
           if(ok){ transcoded=true; codecNote=codec==="hevc"?" (HEVC→H.264 已自动转码)":" (已优化为网页兼容格式)"; }
           else if(codec==="hevc"){ fs.unlinkSync(path.join(VIDEOS,p.id+".mp4")); return send(res,400,{error:"浏览器无法播放 HEVC，请在小程序里导出为 H.264 后重新上传。"}); }
         }
+        const videoUrl=await cldUpload(path.join(VIDEOS,p.id+".mp4"),"petmemory/videos/"+p.id,"video");   // 云端存生成的影像
         p.status="ready"; p.readyAt=Date.now(); p.codec=codec; p.transcoded=transcoded;
+        if(videoUrl) p.videoUrl=videoUrl;
         writePets(pets);
         return send(res,200,{ok:true,petUrl:`${PUBLIC_URL}/pet/${p.id}`,note:codecNote||undefined});
       }catch(e){ return send(res,500,{error:e.message}); }
@@ -919,4 +959,6 @@ const server=http.createServer(async(req,res)=>{
   }
   send(res,404,{error:"not found"});
 });
+// 启动时从 Cloudinary 恢复订单记录（重建后数据不丢）
+cldLoadPets();
 server.listen(PORT,()=>console.log(`Hologram backend on :${PORT} | wall: ${PUBLIC_URL}/wall`));
