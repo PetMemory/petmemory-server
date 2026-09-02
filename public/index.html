@@ -10,6 +10,7 @@
   gtag('js', new Date());
   gtag('config', 'AW-18422126507');
 </script>
+<script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Free Pet Memorial Video — Pet Memory</title>
 <style>
@@ -411,13 +412,24 @@
   // photos
   $("#drop").addEventListener("click",function(){$("#file").click();});
   function readAndShrink(file,cb){
-    var r=new FileReader();
-    r.onload=function(){var im=new Image();
-      im.onload=function(){var s=Math.min(1,1024/Math.max(im.width,im.height));
-        var c=document.createElement("canvas");c.width=Math.round(im.width*s);c.height=Math.round(im.height*s);
-        c.getContext("2d").drawImage(im,0,0,c.width,c.height);cb(c.toDataURL("image/jpeg",0.85));};
-      im.src=r.result;};
-    r.readAsDataURL(file);
+    function shrink(blob){
+      var r=new FileReader();
+      r.onload=function(){var im=new Image();
+        im.onload=function(){var s=Math.min(1,1024/Math.max(im.width,im.height));
+          var c=document.createElement("canvas");c.width=Math.round(im.width*s);c.height=Math.round(im.height*s);
+          c.getContext("2d").drawImage(im,0,0,c.width,c.height);cb(c.toDataURL("image/jpeg",0.85));};
+        im.src=r.result;};
+      r.readAsDataURL(blob);
+    }
+    // iPhone HEIC/HEIF → 先在浏览器里转成 JPEG（否则 canvas 画出黑图）
+    var isHeic=/heic|heif/i.test(file.type||"")||/\.(heic|heif)$/i.test(file.name||"");
+    if(isHeic && window.heic2any){
+      heic2any({blob:file,toType:"image/jpeg",quality:0.92}).then(function(out){
+        shrink(Array.isArray(out)?out[0]:out);
+      }).catch(function(){ shrink(file); });
+    } else {
+      shrink(file);
+    }
   }
   function renderThumbs(){
     $("#thumbs").innerHTML=state.photos.map(function(p){return '<img src="'+p+'">';}).join("");
