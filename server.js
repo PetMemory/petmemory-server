@@ -357,6 +357,11 @@ body{margin:0;background:#0f0c09;color:#F4EBDD;font-family:Georgia,serif;-webkit
 .vid{position:relative;margin:14px 16px 0;background:#000;border-radius:20px;overflow:hidden;cursor:pointer;
   box-shadow:0 0 0 1px rgba(201,168,106,.35),0 18px 50px rgba(0,0,0,.6)}
 .vid video{display:block;width:100%;max-height:68vh;object-fit:contain;background:#000;transition:transform .9s cubic-bezier(.22,.8,.3,1)}
+/* 全屏（放全息盒）：视频铺满屏幕，去掉 68vh 限制，黑底居中 */
+.vid:fullscreen,.vid:-webkit-full-screen{margin:0;border-radius:0;box-shadow:none;background:#000}
+.vid:fullscreen video,.vid:-webkit-full-screen video{max-height:none;width:100vw;height:100vh;object-fit:contain;background:#000}
+.vid:fullscreen .fs,.vid:-webkit-full-screen .fs{display:none}
+.vid:fullscreen .hint,.vid:-webkit-full-screen .hint{display:none}
 .vid.close video{transform:scale(1.22)}
 .vid .heart{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:50px;opacity:0;pointer-events:none;
   filter:drop-shadow(0 0 14px rgba(201,168,106,.9))}
