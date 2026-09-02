@@ -644,10 +644,29 @@ function fulfill(id){
 }
 
 const MIME={".jpg":"image/jpeg",".jpeg":"image/jpeg",".png":"image/png",".mp4":"video/mp4",".webm":"video/webm"};
-function serveFile(res,filePath){
+// 支持 HTTP Range 流式播放 — 手机浏览器(Safari/Chrome)播 MP4 必须
+function serveFile(res,filePath,req){
   if(!fs.existsSync(filePath)){ res.writeHead(404); return res.end("not found"); }
-  res.writeHead(200,{"Content-Type":MIME[path.extname(filePath).toLowerCase()]||"application/octet-stream",
-    "Access-Control-Allow-Origin":"*","Cache-Control":"public, max-age=31536000"});
+  const total=fs.statSync(filePath).size;
+  const type=MIME[path.extname(filePath).toLowerCase()]||"application/octet-stream";
+  const base={"Access-Control-Allow-Origin":"*","Accept-Ranges":"bytes"};
+  const range=req&&req.headers&&req.headers.range;
+  if(range){
+    const m=/bytes=(\d*)-(\d*)/.exec(range);
+    if(m){
+      let start=m[1]?parseInt(m[1],10):0;
+      let end=m[2]?parseInt(m[2],10):total-1;
+      if(isNaN(start)||start<0)start=0;
+      if(isNaN(end)||end>=total)end=total-1;
+      if(start>end||start>=total){ res.writeHead(416,{...base,"Content-Range":`bytes */${total}`}); return res.end(); }
+      res.writeHead(206,{...base,"Content-Type":type,
+        "Content-Range":`bytes ${start}-${end}/${total}`,"Content-Length":(end-start+1),
+        "Cache-Control":"public, max-age=31536000"});
+      return fs.createReadStream(filePath,{start,end}).pipe(res);
+    }
+  }
+  res.writeHead(200,{...base,"Content-Type":type,"Content-Length":total,
+    "Cache-Control":"public, max-age=31536000"});
   fs.createReadStream(filePath).pipe(res);
 }
 function send(res,code,obj){
@@ -748,7 +767,7 @@ const server=http.createServer(async(req,res)=>{
     const pets=readPets().slice().sort((a,b)=>((a.status==="ready")-(b.status==="ready"))||b.createdAt-a.createdAt);
     return (res.writeHead(200,{"Content-Type":"text/html"}),res.end(adminHTML(pets,key)));
   }
-  if(req.method==="GET"&&url.startsWith("/data/")) return serveFile(res,path.join(DATA,url.slice(6)));
+  if(req.method==="GET"&&url.startsWith("/data/")) return serveFile(res,path.join(DATA,url.slice(6)),req);
 
   // customer submits a film (FREE tier: no order; PAID tier: verify order). Merchant crafts & uploads.
   if(req.method==="POST"&&url==="/api/submit"){
@@ -864,13 +883,14 @@ const server=http.createServer(async(req,res)=>{
   if(req.method==="GET"){
     const PUBLIC=path.join(__dirname,"public");
     const map={"":["index.html"],"/":"index.html","/index":"index.html","/index.html":"index.html",
-      "/demo.mp4":"demo.mp4","/premium.mp4":"premium.mp4","/box.svg":"box.svg"};
+      "/demo.mp4":"demo.mp4","/premium.mp4":"premium.mp4","/hero.mp4":"hero.mp4","/box.svg":"box.svg"};
     const key=url==="/"?"/":url;
     if(map[key]){
       const f=path.join(PUBLIC,map[key]);
       if(fs.existsSync(f)){
-        const ct=key.endsWith(".mp4")?"video/mp4":key.endsWith(".svg")?"image/svg+xml":"text/html; charset=utf-8";
-        res.writeHead(200,{"Content-Type":ct,"Cache-Control":key.endsWith(".mp4")?"public, max-age=3600":"no-cache"});
+        if(key.endsWith(".mp4")) return serveFile(res,f,req);   // 视频走 Range 流式
+        const ct=key.endsWith(".svg")?"image/svg+xml":"text/html; charset=utf-8";
+        res.writeHead(200,{"Content-Type":ct,"Cache-Control":"no-cache"});
         fs.createReadStream(f).pipe(res);
         return;
       }
