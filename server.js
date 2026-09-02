@@ -634,10 +634,16 @@ function adminHTML(pets,key){
     const ready=p.status==="ready";
     const acts=(p.actions||[]).join(", ")||"—";
     const n=p.photoCount||1;
-    const imgs=Array.from({length:n},(_,i)=>`<img src="/data/photos/${p.id}${i===0?"":"_"+i}.jpg">`).join("");
+    // 实拍图优先用云端地址（重建不丢），本地做兜底；点开看大图
+    const imgs=Array.from({length:n},(_,i)=>{
+      const src=(i===0&&p.photoUrl)?p.photoUrl:`/data/photos/${p.id}${i===0?"":"_"+i}.jpg`;
+      return `<a href="${src}" target="_blank" rel="noopener" title="点开看大图"><img src="${src}"></a>`;
+    }).join("");
+    const dlSrc=p.photoUrl||`/data/photos/${p.id}.jpg`;
     const badge=p.free?`<span class="free">${p.tier==="premium"?"FREE→Premium":"FREE"}</span>`:"";
     return `<div class="job ${ready?'ready':''}">
       <div class="photos">${imgs}</div>
+      <div style="margin:6px 0"><a class="dlbtn" href="${dlSrc}" target="_blank" rel="noopener">📥 查看 / 下载客户实拍图</a></div>
       <div class="meta">
         <b>${esc(p.name)}</b> ${p.type==="cat"?"🐱":"🐶"} ${badge} <span class="st ${ready?'ok':''}">${ready?"✓ Ready":"⏳ Pending"}</span><br>
         ${p.free?`<span>✉️ ${esc(p.email||"—")} · share:${p.share?"yes":"no"}</span><br>`:`<span>Order: ${esc(p.orderNumber||"—")}</span><br>`}
@@ -663,6 +669,8 @@ h1{font-size:22px;margin:0 0 4px}.sub{color:#7C736A;font-size:13px;margin-bottom
 .photos{display:flex;gap:6px;flex:none;flex-wrap:wrap;max-width:190px}
 .photos img{width:88px;height:88px}
 .photos img:not(:first-child){width:48px;height:48px}
+.photos a{display:inline-block}
+.dlbtn{display:inline-block;background:#B0894F;color:#fff;text-decoration:none;padding:8px 16px;border-radius:9px;font-size:13px;font-weight:600}
 .meta{font-size:13px;line-height:1.7;flex:1}
 .meta b{font-size:16px}
 .st{background:#FBF1E2;color:#B0894F;padding:2px 9px;border-radius:999px;font-size:11px}
