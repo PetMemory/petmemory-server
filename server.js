@@ -392,9 +392,11 @@ body{margin:0;background:#0f0c09;color:#F4EBDD;font-family:Georgia,serif;-webkit
 .share a:hover{background:#1d1814}
 .foot{text-align:center;color:#6f6455;font-size:12px;margin-top:44px;padding:0 16px}
 .letter{text-align:center;padding:6px 22px 0}
-.candlebtn{font-size:38px;display:inline-block;cursor:pointer;margin:2px auto;filter:grayscale(1) brightness(.55);transition:.4s;line-height:1}
-.candlebtn.lit{filter:none;animation:fl 2.2s ease-in-out infinite}
-@keyframes fl{0%,100%{opacity:.8;transform:scale(1)}50%{opacity:1;transform:scale(1.06)}}
+.candlebtn{font-size:40px;display:inline-block;cursor:pointer;margin:2px auto;padding:10px;filter:grayscale(1) brightness(.55);transition:.3s;line-height:1;
+  touch-action:manipulation;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none;border-radius:50%}
+.candlebtn.lit{filter:none;animation:fl 2.2s ease-in-out infinite;
+  text-shadow:0 0 16px rgba(255,190,90,.95),0 0 44px rgba(255,160,60,.65)}
+@keyframes fl{0%,100%{opacity:.82;transform:scale(1)}50%{opacity:1;transform:scale(1.07)}}
 .candlenote{font-size:11px;color:#6f6455;letter-spacing:1px;margin-bottom:6px}
 .msg{font-style:italic;color:#e7d7b8;font-size:16.5px;line-height:1.8;max-width:520px;margin:14px auto 0;
   padding:22px 24px;border:1px solid rgba(201,168,106,.3);border-radius:16px;background:rgba(201,168,106,.05);white-space:pre-wrap;text-align:left}
@@ -495,8 +497,22 @@ document.getElementById('fsBtn').addEventListener('click',function(){
   var el=document.getElementById('vid');
   if(el.requestFullscreen){el.requestFullscreen()}else if(el.webkitRequestFullscreen){el.webkitRequestFullscreen()}
 });
-// candle ritual
-document.getElementById('candle').addEventListener('click',function(){ this.classList.toggle('lit'); });
+// candle ritual — robust on mobile (pointer/touch fire instantly, no 300ms tap delay)
+(function(){
+  var c=document.getElementById('candle');
+  if(!c) return;
+  var lastFire=0;
+  function light(e){
+    var now=Date.now();
+    if(now-lastFire<300) return;   // 防止 click+touch 双触发
+    lastFire=now;
+    c.classList.toggle('lit');
+    if(e&&e.cancelable&&e.type!=='click') e.preventDefault();
+  }
+  c.addEventListener('pointerdown',light);
+  c.addEventListener('touchend',light,{passive:false});
+  c.addEventListener('click',light);
+})();
 // save letter
 document.getElementById('saveLetter').addEventListener('click',function(){
   var msg=document.getElementById('msg').value.trim();
