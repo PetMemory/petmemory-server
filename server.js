@@ -499,7 +499,7 @@ body{margin:0;background:#0f0c09;color:#F4EBDD;font-family:Georgia,serif;-webkit
   <div class="pc">
     <div class="emo">🎬</div>
     <div class="t">Premium 15s Film</div>
-    <div class="pr">$29.99</div>
+    <div class="pr">$9.99</div>
     <div class="d">A longer, cinematic tribute — more moments, their full story, in light.</div>
     <a href="https://petmenory.com/products/custom-al-healing-memorialvideo-for-pet-cinematictribute-film" target="_blank" rel="noopener">Go premium →</a>
   </div>
