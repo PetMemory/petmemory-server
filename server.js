@@ -81,13 +81,16 @@ function httpsGet(url){ return new Promise((res,rej)=>{ https2.get(url,r=>{ let 
 const PETS_CLD_ID="petmemory/pets.json";
 // 启动时从云端拉取订单记录（重建后恢复）
 async function cldLoadPets(){
-  if(!CLD) return;
+  if(!CLD){ console.log("cldLoadPets: cloudinary not configured"); return; }
   try{
-    const url=CLD.url(PETS_CLD_ID,{resource_type:"raw",secure:true})+"?t="+Date.now();
+    // 用 Admin API 拿备份文件的确切地址（认证请求，不靠猜 URL，最可靠）
+    const info=await CLD.api.resource(PETS_CLD_ID,{resource_type:"raw"});
+    const url=info.secure_url;
     const txt=await httpsGet(url);
     const arr=JSON.parse(txt);
     if(Array.isArray(arr)&&arr.length){ fs.writeFileSync(DB,JSON.stringify(arr,null,2)); console.log("restored",arr.length,"pets from cloud"); }
-  }catch(e){ /* 第一次还没有云端记录，忽略 */ }
+    else console.log("cldLoadPets: cloud backup is empty");
+  }catch(e){ console.log("cldLoadPets skip:",e.message); }
 }
 // 保存订单记录到云端（异步，不阻塞）
 function cldSavePets(pets){
