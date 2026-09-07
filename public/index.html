@@ -280,9 +280,6 @@
       </div>
       <input type="file" id="file" accept="image/*" multiple hidden>
 
-      <label class="fld">One line to them <b>*</b> <span style="text-transform:none;letter-spacing:0">(shown in the film)</span></label>
-      <input type="text" id="poneline" placeholder="e.g. Thank you for every sunrise by the window." maxlength="200" style="margin-bottom:18px">
-
       <label class="fld">Add motions <span style="text-transform:none;letter-spacing:0">(optional · $2.99 each — maker features them, ready in 5–15 min)</span></label>
       <div class="motions" id="motions">
         <div class="motion on" data-m="" data-price="0"><span class="me">✨</span><span>Any — let the maker choose</span><span class="mprice">Free</span></div>
@@ -459,12 +456,11 @@
   // submit
   $("#submitBtn").addEventListener("click",function(){
     $("#err").textContent="";
-    var name=$("#pname").value.trim(), email=$("#pemail").value.trim(), one=$("#poneline").value.trim(), story=$("#pstory").value.trim();
+    var name=$("#pname").value.trim(), email=$("#pemail").value.trim(), story=$("#pstory").value.trim();
     if(!name){$("#err").textContent="Please enter their name.";return;}
     if(state.tier==="free"&&!email){$("#err").textContent="Please enter your email to receive the film.";return;}
     if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){$("#err").textContent="That email doesn't look right.";return;}
     if(!state.photos.length){$("#err").textContent="Please upload at least one photo.";return;}
-    if(state.tier==="free"&&!one){$("#err").textContent="Please write one line to them.";return;}
 
     if(state.tier==="premium"){
       window.open("https://petmenory.com/products/custom-al-healing-memorialvideo-for-pet-cinematictribute-film","_blank");
@@ -486,7 +482,7 @@
     $("#submitBtn").textContent="Submitting…"; $("#submitBtn").disabled=true;
     fetch(BACKEND+"/api/submit",{method:"POST",headers:{"Content-Type":"application/json"},
       body:JSON.stringify({free:true,email:email,name:name,type:state.type,photos:state.photos,
-        oneLine:one,story:story,share:state.share,tier:"free",actions:state.motions})})
+        story:story,share:state.share,tier:"free",actions:state.motions})})
     .then(function(r){return r.json().then(function(j){return {status:r.status,body:j};});})
     .then(function(res){
       if(res.status===200&&res.body.ok&&res.body.petUrl){
@@ -519,11 +515,11 @@
   $("#paidCreate").addEventListener("click",function(){
     var no=$("#orderno").value.trim();
     if(!no){$("#paidErr").textContent="Please enter your order number.";return;}
-    var name=$("#pname").value.trim(), one=$("#poneline").value.trim(), story=$("#pstory").value.trim();
+    var name=$("#pname").value.trim(), story=$("#pstory").value.trim();
     $("#paidCreate").textContent="Creating…"; $("#paidCreate").disabled=true;
     fetch(BACKEND+"/api/submit",{method:"POST",headers:{"Content-Type":"application/json"},
       body:JSON.stringify({orderNumber:no,photo:state.photos[0],photos:state.photos,name:name,type:state.type,
-        letter:one,story:story,share:state.share,projection:true,actions:state.motions})})
+        story:story,share:state.share,projection:true,actions:state.motions})})
     .then(function(r){return r.json().then(function(j){return {status:r.status,body:j};});})
     .then(function(res){
       if(res.status===200&&res.body.ok&&res.body.petUrl){
