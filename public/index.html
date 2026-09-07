@@ -61,15 +61,41 @@
   .leftcol{display:flex;flex-direction:column;justify-content:flex-start;min-height:100%}
   .leftcol .head{text-align:center;margin-bottom:16px}
   @media(max-width:820px){
-    .grid{grid-template-columns:1fr;align-items:start}
+    .grid{grid-template-columns:1fr;align-items:start;gap:18px;margin-top:18px}
     .leftcol{justify-content:flex-start}
     .head h1{font-size:30px}
     .head p{font-size:15px}
     .card{padding:20px}
   }
+  /* 移动端紧凑美化（App 风） */
   @media(max-width:520px){
-    .frow{grid-template-columns:1fr}
-    .wrap{padding:18px 14px 60px}
+    body{line-height:1.5}
+    .wrap{padding:12px 14px 60px}
+    .brand{padding:6px 0 8px}
+    .leftcol .head{margin-bottom:10px}
+    .leftcol .head .free-badge{font-size:10.5px;letter-spacing:1.2px;padding:5px 12px}
+    .leftcol .head .urgent{font-size:11.5px;margin-top:4px;letter-spacing:.3px}
+    .frow{grid-template-columns:1fr 1fr;gap:10px}
+    .card{padding:16px 15px;border-radius:16px;box-shadow:0 4px 14px rgba(176,137,79,.10)}
+    .upload{padding:18px 14px;border-radius:14px}
+    .upload .paw{font-size:24px;margin-bottom:2px}
+    .upload .title{font-size:15px}
+    .upload .sub{font-size:12px}
+    textarea,input,select{font-size:15px;padding:10px 12px;border-radius:10px}
+    .sel{gap:8px;padding:6px}
+    .sel button{padding:8px 10px;font-size:13px;border-radius:10px}
+    .motions{grid-template-columns:repeat(2,1fr);gap:8px}
+    .motion{padding:8px;border-radius:10px;font-size:12.5px}
+    .submit{font-size:15px;padding:14px;border-radius:14px;margin-top:14px}
+    .paidEntry{font-size:13px;padding:14px;border-radius:14px;margin-top:10px}
+    .upsell{padding:14px;border-radius:14px;margin-top:14px}
+    .upsell .pc{padding:0;margin:0}
+    .how{padding:18px 14px;border-radius:16px;margin-top:18px}
+    .how h3{font-size:15px;margin-bottom:10px}
+    .how-steps{grid-template-columns:1fr 1fr 1fr;gap:6px}
+    .how-steps .st .nm{font-size:11px}
+    footer{padding:14px 8px 6px;font-size:11px}
+    .brand .name{font-size:14px}
   }
 
   /* ---- LEFT: preview + tiers ---- */
@@ -104,7 +130,6 @@
   .area .at{display:block;font-family:'Playfair Display',Georgia,serif;font-size:16px;font-weight:600}
   .area .ad{display:block;font-size:12px;color:var(--muted);margin-top:2px;line-height:1.4}
   .area .aarr{margin-left:auto;color:var(--gold);font-size:18px;flex:none}
-  @media(max-width:520px){.area .ad{font-size:11px}}
 
   /* how it works (left-column balance) */
   .how-steps{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:18px;text-align:center}
@@ -112,7 +137,6 @@
   .how-steps .st .ic{font-size:24px;display:block;margin-bottom:4px}
   .how-steps .st .nm{font-size:12.5px;font-weight:600;color:var(--ink)}
   .how-steps .st .ds{font-size:11px;color:var(--muted);margin-top:2px;line-height:1.35}
-  @media(max-width:520px){.how-steps{grid-template-columns:1fr 1fr 1fr;gap:6px}.how-steps .st .nm{font-size:11px}}
 
   /* ---- RIGHT: form ---- */
   .card{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:28px;
@@ -146,7 +170,6 @@
   .motion .mprice{font-size:11px;color:var(--gold);font-weight:600;margin-left:auto}
   .motion.on{border-color:var(--gold);background:linear-gradient(180deg,#FBF1E2,#F8E9D5)}
   .mtotal{font-size:13px;color:var(--gold);font-weight:600;margin-bottom:18px;min-height:18px}
-  @media(max-width:520px){.motions{grid-template-columns:repeat(2,1fr)}}
 
   .share-row{display:flex;align-items:flex-start;gap:10px;margin-bottom:18px;font-size:14px;color:var(--ink)}
   .share-row input{margin-top:3px}
@@ -173,7 +196,6 @@
     background:linear-gradient(180deg,#FBF1E2,#FBF7F1);text-align:center}
   .upsell h3{margin:0 0 6px;font-size:20px}
   .upsell .row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}
-  @media(max-width:520px){.upsell .row{grid-template-columns:1fr}}
   .upsell .o{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px;text-align:center}
   .upsell .o .t{font-family:'Playfair Display',Georgia,serif;font-size:16px}
   .upsell .o .p{color:var(--gold);font-weight:600;font-size:19px;margin:4px 0}
@@ -195,8 +217,6 @@
     <div class="leftcol">
       <div class="head">
         <span class="free-badge">Free memorial clip · a few spots each day</span>
-        <h1>Create a Free Moving Memory<br>From One Pet Photo</h1>
-        <p>Upload 1–5 photos of your dog or cat, write their story and a few words you'd like to say. We'll gently bring their photo to life as a tender, cinematic memorial video — free, no sign-up.</p>
         <div class="urgent" id="limitNote"></div>
       </div>
 
