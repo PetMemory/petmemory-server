@@ -231,18 +231,6 @@
         <li>🔗 A private page you can keep forever, and share with family</li>
       </ul>
 
-      <div class="areas">
-        <a class="area" id="areaWall" href="#" target="_blank" rel="noopener">
-          <span class="aic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20.2s-7.2-4.7-9.2-9.2C1.4 7.9 3.4 4.5 7 4.5c1.9 0 3.6.9 5 2.6 1.4-1.7 3.1-2.6 5-2.6 3.6 0 5.6 3.4 4.2 6.5-2 4.5-9.2 9.2-9.2 9.2z"/><circle cx="9" cy="10.5" r="0.9" fill="currentColor" stroke="none"/><circle cx="15" cy="10.5" r="0.9" fill="currentColor" stroke="none"/><circle cx="12" cy="8.4" r="0.9" fill="currentColor" stroke="none"/><ellipse cx="12" cy="13.4" rx="2" ry="1.6" fill="currentColor" stroke="none"/></svg></span>
-          <span class="abody"><span class="at">Shared Memorials</span><span class="ad">Discover pet stories and memories shared with permission by their families.</span></span>
-          <span class="aarr">→</span>
-        </a>
-        <a class="area" id="areaMy" href="#" target="_blank" rel="noopener">
-          <span class="aic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10.5" width="16" height="9.5" rx="2.2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/><circle cx="10.1" cy="14.2" r="0.8" fill="currentColor" stroke="none"/><circle cx="13.9" cy="14.2" r="0.8" fill="currentColor" stroke="none"/><circle cx="12" cy="12.9" r="0.8" fill="currentColor" stroke="none"/><ellipse cx="12" cy="16.3" rx="1.6" ry="1.2" fill="currentColor" stroke="none"/></svg></span>
-          <span class="abody"><span class="at">My Memory Space</span><span class="ad">View and manage your private pet memories, films, and letters.</span></span>
-          <span class="aarr">→</span>
-        </a>
-      </div>
     </div>
 
     <!-- RIGHT: form -->
@@ -355,8 +343,7 @@
   var BACKEND="https://petmemory-server.onrender.com";   // deployed backend URL
   var state={photos:[],type:"cat",tier:"free",share:true,motions:[]};
 
-  if(BACKEND){ $("#areaWall").href=BACKEND+"/wall"; $("#areaMy").href=BACKEND+"/my"; }
-  else { $("#areaWall").style.display="none"; $("#areaMy").style.display="none"; }
+  // areas removed — Shared Memorials & My Memory Space live in the Memory Center
 
   // FIXED official demo video on the homepage preview — never syncs with customer videos.
   // To change this video, replace demo.mp4 (and keep the tag text below).
